@@ -2,19 +2,19 @@ from flask import Blueprint, jsonify, request, abort
 
 from conectar.funcaoConectar import conectar
 
-serie_C_bp = Blueprint('SerieC', __name__)
+funcionarios = Blueprint('funcionarios', __name__)
 
-#ROTAS PARA A TABELA SerieC
+#ROTAS PARA A TABELA funcionarios
 ##ROTA GET
 ##############################################
-@serie_C_bp.route("/SerieC", methods=["GET"])
+@funcionarios.route("/funcionarios", methods=["GET"])
 def listar_CadastrosC():
     conn = conectar()
     #conn.execute("PRAGMA foreign_keys = ON") #ativa as chaves estrangeiras das tabelas (pois, não é ativado por padrão)
     cursor = conn.cursor()
-    cursor.execute("SELECT idSerieC, NomeClube, PontosClube, JogosClube, SaldoGols, VitoriasClube, DerrotasClube, EmpateClube, PosicaoTabela FROM SerieC")
+    cursor.execute("SELECT idFuncionario, NomeFuncionario, SenhaFuncionario, RegistroFuncionario, CPF_Funcionario FROM funcionarios")
     dados = [
-        {"idSerieC": row[0], "NomeClube": row[1], "PontosClube": row[2], "JogosClube": row[3], "SaldoGols": row[4], "VitoriasClube": row[5], "DerrotasClube": row[6], "EmpateClube": row[7], "PosicaoTabela": row[8]}
+        {"idFuncionario": row[0], "NomeFuncionario": row[1], "SenhaFuncionario": row[2], "RegistroFuncionario": row[3], "CPF_Funcionario": row[4]}
         for row in cursor.fetchall()
     ]
     conn.close()
@@ -22,50 +22,50 @@ def listar_CadastrosC():
 
 ##ROTA INSERT
 #############################################
-@serie_C_bp.route("/SerieC", methods=["POST"])
+@funcionarios.route("/funcionarios", methods=["POST"])
 def criar_usuarioC():
     dados = request.get_json(silent=True)
     if not dados:
         abort(400, description="JSON inválido ou ausente")
 
     # Validação de campos obrigatórios
-    campos_obrigatorios = {"NomeClube", "PontosClube", "JogosClube", "SaldoGols", "VitoriasClube", "DerrotasClube", "EmpateClube", "PosicaoTabela"}
+    campos_obrigatorios = {"NomeFuncionario", "SenhaFuncionario", "RegistroFuncionario", "CPF_Funcionario"}
     if not campos_obrigatorios.issubset(dados.keys()):
         abort(400, description=f"Campos obrigatórios: {', '.join(campos_obrigatorios)}")
 
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO SerieC (NomeClube, PontosClube, JogosClube, SaldoGols, VitoriasClube, DerrotasClube, EmpateClube, PosicaoTabela)"
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (dados["NomeClube"], dados["PontosClube"], dados["JogosClube"], dados["SaldoGols"], dados["VitoriasClube"], dados["DerrotasClube"], dados["EmpateClube"], dados["PosicaoTabela"])
+        "INSERT INTO funcionarios (NomeFuncionario, SenhaFuncionario, RegistroFuncionario, CPF_Funcionario)"
+        "VALUES (?, ?, ?, ?)",
+        (dados["NomeFuncionario"], dados["SenhaFuncionario"], dados["RegistroFuncionario"], dados["CPF_Funcionario"])
     )
     conn.commit()
     novo_id = cursor.lastrowid
     conn.close()
 
     # 201 Created + Location do recurso recém‑criado
-    resposta = jsonify({"idSerieC": novo_id, **dados})
+    resposta = jsonify({"idFuncionario": novo_id, **dados})
     resposta.status_code = 201
-    resposta.headers["Location"] = f"/SerieC/{novo_id}"
+    resposta.headers["Location"] = f"/funcionarios/{novo_id}"
     return resposta
 
 ##ROTA UPDATE
 #############################################
-@serie_C_bp.route("/SerieC/<int:idSerieC>", methods=["PUT", "PATCH"])
-def atualizar_usuarioC(idSerieC):
+@funcionarios.route("/funcionarios/<int:idFuncionario>", methods=["PUT", "PATCH"])
+def atualizar_usuarioC(idFuncionario):
     dados = request.get_json(silent=True)
     if not dados:
         abort(400, description="JSON inválido ou ausente")
 
     # Para PUT, garanta que todos os campos estejam presentes
     if request.method == "PUT":
-        campos_esperados = {"NomeClube", "PontosClube", "JogosClube", "SaldoGols", "VitoriasClube", "DerrotasClube", "EmpateClube", "PosicaoTabela"}
+        campos_esperados = {"NomeFuncionario", "SenhaFuncionario", "RegistroFuncionario", "CPF_Funcionario"}
         if not campos_esperados.issubset(dados.keys()):
             abort(400, description=f"PUT requer todos os campos: {', '.join(campos_esperados)}")
 
     # Monta dinamicamente o SQL somente com os campos enviados
-    campos_validos = {"NomeClube", "PontosClube", "JogosClube", "SaldoGols", "VitoriasClube", "DerrotasClube", "EmpateClube", "PosicaoTabela"}
+    campos_validos = {"NomeFuncionario", "SenhaFuncionario", "RegistroFuncionario", "CPF_Funcionario"}
     set_clauses = []
     valores = []
     for campo in campos_validos & dados.keys():
@@ -75,12 +75,12 @@ def atualizar_usuarioC(idSerieC):
     if not set_clauses:
         abort(400, description="Nenhum campo válido para atualizar")
 
-    valores.append(idSerieC)  # último parâmetro é o WHERE
+    valores.append(idFuncionario)  # último parâmetro é o WHERE
 
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
-        f"UPDATE SerieC SET {', '.join(set_clauses)} WHERE idSerieC = ?",
+        f"UPDATE funcionarios SET {', '.join(set_clauses)} WHERE idFuncionario = ?",
         tuple(valores)
     )
     conn.commit()
@@ -96,13 +96,13 @@ def atualizar_usuarioC(idSerieC):
 
 ##ROTA DELETE
 #############################################
-@serie_C_bp.route("/SerieC/<int:idSerieC>", methods=["DELETE"])
-def deletar_usuarioC(idSerieC):
+@funcionarios.route("/funcionarios/<int:idFuncionario>", methods=["DELETE"])
+def deletar_usuarioC(idFuncionario):
     conn = conectar()
     cursor = conn.cursor()
 
     # tenta apagar o registro informado
-    cursor.execute("DELETE FROM SerieC WHERE idSerieC = ?", (idSerieC,))
+    cursor.execute("DELETE FROM funcionarios WHERE idFuncionario = ?", (idFuncionario,))
     conn.commit()
 
     # cursor.rowcount informa quantas linhas foram afetadas

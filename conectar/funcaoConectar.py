@@ -1,4 +1,9 @@
-import sqlite3
+import mysql.conector
 
 def conectar():
-    return sqlite3.connect("./BancoDados/CampeonatoBrasileiro2026DB.db")  # banco no mesmo diretório
+    return mysql.connector.connect(
+        host="127.0.0.1",          # endereço do servidor MySQL
+        user="root",        # usuário do banco
+        password="",      # senha do banco
+        database="app_biblioteca_banco"      # nome do banco de dados
+    )

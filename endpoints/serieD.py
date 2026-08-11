@@ -2,19 +2,19 @@ from flask import Blueprint, jsonify, request, abort
 
 from conectar.funcaoConectar import conectar
 
-serie_D_bp = Blueprint('SerieD', __name__)
+livros = Blueprint('livros', __name__)
 
 #ROTAS PARA A TABELA SerieD
 ##ROTA GET
 ##############################################
-@serie_D_bp.route("/SerieD", methods=["GET"])
+@livros.route("/livros", methods=["GET"])
 def listar_CadastrosD():
     conn = conectar()
     #conn.execute("PRAGMA foreign_keys = ON") #ativa as chaves estrangeiras das tabelas (pois, não é ativado por padrão)
     cursor = conn.cursor()
-    cursor.execute("SELECT idSerieD, NomeClube, PontosClube, JogosClube, SaldoGols, VitoriasClube, DerrotasClube, EmpateClube, PosicaoTabela FROM SerieD")
+    cursor.execute("SELECT idLivro, NomeLivro, AutorLivro, EditoraLivro, Ano_Edicao_Livro, CategoriaLivro, QuantidadeLivro, StatusLivro FROM livros")
     dados = [
-        {"idSerieD": row[0], "NomeClube": row[1], "PontosClube": row[2], "JogosClube": row[3], "SaldoGols": row[4], "VitoriasClube": row[5], "DerrotasClube": row[6], "EmpateClube": row[7], "PosicaoTabela": row[8]}
+        {"idLivro": row[0], "NomeLivro": row[1], "AutorLivro": row[2], "EditoraLivro": row[3], "Ano_Edicao_Livro": row[4], "CategoriaLivro": row[5], "QuantidadeLivro": row[6], "StatusLivro": row[7]}
         for row in cursor.fetchall()
     ]
     conn.close()
@@ -22,50 +22,50 @@ def listar_CadastrosD():
 
 ##ROTA INSERT
 #############################################
-@serie_D_bp.route("/SerieD", methods=["POST"])
+@livros.route("/livros", methods=["POST"])
 def criar_usuarioD():
     dados = request.get_json(silent=True)
     if not dados:
         abort(400, description="JSON inválido ou ausente")
 
     # Validação de campos obrigatórios
-    campos_obrigatorios = {"NomeClube", "PontosClube", "JogosClube", "SaldoGols", "VitoriasClube", "DerrotasClube", "EmpateClube", "PosicaoTabela"}
+    campos_obrigatorios = {"NomeLivro", "AutorLivro", "EditoraLivro", "Ano_Edicao_Livro", "CategoriaLivro", "QuantidadeLivro", "StatusLivro"}
     if not campos_obrigatorios.issubset(dados.keys()):
         abort(400, description=f"Campos obrigatórios: {', '.join(campos_obrigatorios)}")
 
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO SerieD (NomeClube, PontosClube, JogosClube, SaldoGols, VitoriasClube, DerrotasClube, EmpateClube, PosicaoTabela)"
+        "INSERT INTO livros (NomeLivro, AutorLivro, EditoraLivro, Ano_Edicao_Livro, CategoriaLivro, QuantidadeLivro, StatusLivro)"
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (dados["NomeClube"], dados["PontosClube"], dados["JogosClube"], dados["SaldoGols"], dados["VitoriasClube"], dados["DerrotasClube"], dados["EmpateClube"], dados["PosicaoTabela"])
+        (dados["NomeLivro"], dados["AutorLivro"], dados["EditoraLivro"], dados["Ano_Edicao_Livro"], dados["CategoriaLivro"], dados["QuantidadeLivro"], dados["StatusLivro"])
     )
     conn.commit()
     novo_id = cursor.lastrowid
     conn.close()
 
     # 201 Created + Location do recurso recém‑criado
-    resposta = jsonify({"idSerieD": novo_id, **dados})
+    resposta = jsonify({"idLivro": novo_id, **dados})
     resposta.status_code = 201
-    resposta.headers["Location"] = f"/SerieD/{novo_id}"
+    resposta.headers["Location"] = f"/livros/{novo_id}"
     return resposta
 
 ##ROTA UPDATE
 #############################################
-@serie_D_bp.route("/SerieD/<int:idSerieD>", methods=["PUT", "PATCH"])
-def atualizar_usuarioD(idSerieD):
+@livros.route("/livros/<int:idLivro>", methods=["PUT", "PATCH"])
+def atualizar_usuarioD(idLivro):
     dados = request.get_json(silent=True)
     if not dados:
         abort(400, description="JSON inválido ou ausente")
 
     # Para PUT, garanta que todos os campos estejam presentes
     if request.method == "PUT":
-        campos_esperados = {"NomeClube", "PontosClube", "JogosClube", "SaldoGols", "VitoriasClube", "DerrotasClube", "EmpateClube", "PosicaoTabela"}
+        campos_esperados = {"NomeLivro", "AutorLivro", "EditoraLivro", "Ano_Edicao_Livro", "CategoriaLivro", "QuantidadeLivro", "StatusLivro"}
         if not campos_esperados.issubset(dados.keys()):
             abort(400, description=f"PUT requer todos os campos: {', '.join(campos_esperados)}")
 
     # Monta dinamicamente o SQL somente com os campos enviados
-    campos_validos = {"NomeClube", "PontosClube", "JogosClube", "SaldoGols", "VitoriasClube", "DerrotasClube", "EmpateClube", "PosicaoTabela"}
+    campos_validos = {"NomeLivro", "AutorLivro", "EditoraLivro", "Ano_Edicao_Livro", "CategoriaLivro", "QuantidadeLivro", "StatusLivro"}
     set_clauses = []
     valores = []
     for campo in campos_validos & dados.keys():
@@ -75,12 +75,12 @@ def atualizar_usuarioD(idSerieD):
     if not set_clauses:
         abort(400, description="Nenhum campo válido para atualizar")
 
-    valores.append(idSerieD)  # último parâmetro é o WHERE
+    valores.append(idLivro)  # último parâmetro é o WHERE
 
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
-        f"UPDATE SerieD SET {', '.join(set_clauses)} WHERE idSerieD = ?",
+        f"UPDATE livros SET {', '.join(set_clauses)} WHERE idLivro = ?",
         tuple(valores)
     )
     conn.commit()
@@ -96,13 +96,13 @@ def atualizar_usuarioD(idSerieD):
 
 ##ROTA DELETE
 #############################################
-@serie_D_bp.route("/SerieD/<int:idSerieD>", methods=["DELETE"])
-def deletar_usuarioC(idSerieD):
+@livros.route("/livros/<int:idLivro>", methods=["DELETE"])
+def deletar_usuarioC(idLivro):
     conn = conectar()
     cursor = conn.cursor()
 
     # tenta apagar o registro informado
-    cursor.execute("DELETE FROM SerieD WHERE idSerieD = ?", (idSerieD,))
+    cursor.execute("DELETE FROM livros WHERE idLivro = ?", (idLivro,))
     conn.commit()
 
     # cursor.rowcount informa quantas linhas foram afetadas
