@@ -2,19 +2,19 @@ from flask import Blueprint, jsonify, request, abort
 
 from conectar.funcaoConectar import conectar
 
-emprestimos = Blueprint('emprestimos', __name__)
+aluno = Blueprint('aluno', __name__)
 
-#ROTAS PARA A TABELA emprestimos
+#ROTAS PARA A TABELA aluno
 ##ROTA GET
 ##############################################
-@emprestimos.route("/emprestimos", methods=["GET"])
-def listar_CadastrosB():
+@aluno.route("/aluno", methods=["GET"])
+def listar_Cadastros():
     conn = conectar()
     #conn.execute("PRAGMA foreign_keys = ON") #ativa as chaves estrangeiras das tabelas (pois, não é ativado por padrão)
     cursor = conn.cursor()
-    cursor.execute("SELECT idEmprestimo, DataEmprestimo, PrevisaoDevolucao FROM emprestimos")
+    cursor.execute("SELECT idAluno, NomeAluno, SenhaAluno, MatriculaAluno, EnderecoAluno FROM aluno")
     dados = [
-        {"idEmprestimo": row[0], "DataEmprestimo": row[1], "PrevisaoDevolucao": row[2]}
+        {"idaluno": row[0], "NomeAluno": row[1], "SenhaAluno": row[2], "MatriculaAluno": row[3], "EnderecoAluno": row[4]}
         for row in cursor.fetchall()
     ]
     conn.close()
@@ -22,65 +22,66 @@ def listar_CadastrosB():
 
 ##ROTA INSERT
 #############################################
-@emprestimos.route("/emprestimos", methods=["POST"])
-def criar_usuarioB():
+
+@aluno.route("/aluno", methods=["POST"])
+def criar_usuario():
     dados = request.get_json(silent=True)
     if not dados:
         abort(400, description="JSON inválido ou ausente")
 
     # Validação de campos obrigatórios
-    campos_obrigatorios = {"DataEmprestimo", "PrevisaoDevolucao"}
+    campos_obrigatorios = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno"}
     if not campos_obrigatorios.issubset(dados.keys()):
         abort(400, description=f"Campos obrigatórios: {', '.join(campos_obrigatorios)}")
 
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO emprestimos (DataEmprestimo, PrevisaoDevolucao)"
-        "VALUES (?, ?)",
-        (dados["DataEmprestimo"], dados["PrevisaoDevolucao"])
+        "INSERT INTO aluno (NomeAluno, SenhaAluno, MatriculaAluno, EnderecoAluno)"
+        "VALUES (%s, %s, %s, %s)",
+        (dados["NomeAluno"], dados["SenhaAluno"], dados["MatriculaAluno"], dados["EnderecoAluno"])
     )
     conn.commit()
     novo_id = cursor.lastrowid
     conn.close()
 
     # 201 Created + Location do recurso recém‑criado
-    resposta = jsonify({"idEmprestimo": novo_id, **dados})
+    resposta = jsonify({"idAluno": novo_id, **dados})
     resposta.status_code = 201
-    resposta.headers["Location"] = f"/emprestimos/{novo_id}"
+    resposta.headers["Location"] = f"/aluno/{novo_id}"
     return resposta
 
 ##ROTA UPDATE
 #############################################
-@emprestimos.route("/emprestimos/<int:idEmprestimo>", methods=["PUT", "PATCH"])
-def atualizar_usuarioB(idEmprestimo):
+@aluno.route("/aluno/<int:idAluno>", methods=["PUT", "PATCH"])
+def atualizar_usuario(idAluno):
     dados = request.get_json(silent=True)
     if not dados:
         abort(400, description="JSON inválido ou ausente")
 
     # Para PUT, garanta que todos os campos estejam presentes
     if request.method == "PUT":
-        campos_esperados = {"DataEmprestimo", "PrevisaoDevolucao"}
+        campos_esperados = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno"}
         if not campos_esperados.issubset(dados.keys()):
             abort(400, description=f"PUT requer todos os campos: {', '.join(campos_esperados)}")
 
     # Monta dinamicamente o SQL somente com os campos enviados
-    campos_validos = {"DataEmprestimo", "PrevisaoDevolucao"}
+    campos_validos = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno"}
     set_clauses = []
     valores = []
     for campo in campos_validos & dados.keys():
-        set_clauses.append(f"{campo} = ?")
+        set_clauses.append(f"{campo} = %s")
         valores.append(dados[campo])
 
     if not set_clauses:
         abort(400, description="Nenhum campo válido para atualizar")
 
-    valores.append(idEmprestimo)  # último parâmetro é o WHERE
+    valores.append(idAluno)  # último parâmetro é o WHERE
 
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
-        f"UPDATE emprestimos SET {', '.join(set_clauses)} WHERE idEmprestimos = ?",
+        f"UPDATE aluno SET {', '.join(set_clauses)} WHERE idAluno = %s",
         tuple(valores)
     )
     conn.commit()
@@ -96,13 +97,13 @@ def atualizar_usuarioB(idEmprestimo):
 
 ##ROTA DELETE
 #############################################
-@emprestimos.route("/emprestimos/<int:idEmprestimo>", methods=["DELETE"])
-def deletar_usuarioB(idEmprestimo):
+@aluno.route("/aluno/<int:idAluno>", methods=["DELETE"])
+def deletar_aluno(idAluno):
     conn = conectar()
     cursor = conn.cursor()
 
     # tenta apagar o registro informado
-    cursor.execute("DELETE FROM emprestimos WHERE idEmprestimo = ?", (idEmprestimo,))
+    cursor.execute("DELETE FROM aluno WHERE idAluno = %s", (idAluno,))
     conn.commit()
 
     # cursor.rowcount informa quantas linhas foram afetadas
