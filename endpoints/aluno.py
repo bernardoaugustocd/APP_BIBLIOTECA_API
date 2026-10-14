@@ -1,10 +1,12 @@
-from flask import Blueprint, jsonify, request, abort
+from flask import  Blueprint, jsonify, request, abort
 
 from conectar.funcaoConectar import conectar
 
+
 aluno = Blueprint('aluno', __name__)
 
-#ROTAS PARA A TABELA aluno
+
+#ROTAS PARA A TABELA SERIE A
 ##ROTA GET
 ##############################################
 @aluno.route("/aluno", methods=["GET"])
@@ -12,9 +14,9 @@ def listar_Cadastros():
     conn = conectar()
     #conn.execute("PRAGMA foreign_keys = ON") #ativa as chaves estrangeiras das tabelas (pois, não é ativado por padrão)
     cursor = conn.cursor()
-    cursor.execute("SELECT idAluno, NomeAluno, SenhaAluno, MatriculaAluno, EnderecoAluno FROM aluno")
+    cursor.execute("SELECT idAluno, NomeAluno, SenhaAluno, MatriculaAluno, EnderecoAluno, TurmaAluno, ContatoAluno FROM aluno")
     dados = [
-        {"idaluno": row[0], "NomeAluno": row[1], "SenhaAluno": row[2], "MatriculaAluno": row[3], "EnderecoAluno": row[4]}
+        {"idAluno": row[0], "NomeAluno": row[1], "SenhaAluno": row[2], "MatriculaAluno": row[3], "EnderecoAluno": row [4], "TurmaAluno": row [5], "ContatoAluno": row [6]}
         for row in cursor.fetchall()
     ]
     conn.close()
@@ -22,7 +24,6 @@ def listar_Cadastros():
 
 ##ROTA INSERT
 #############################################
-
 @aluno.route("/aluno", methods=["POST"])
 def criar_usuario():
     dados = request.get_json(silent=True)
@@ -30,16 +31,16 @@ def criar_usuario():
         abort(400, description="JSON inválido ou ausente")
 
     # Validação de campos obrigatórios
-    campos_obrigatorios = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno"}
+    campos_obrigatorios = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno", "TurmaAluno", "ContatoAluno"}
     if not campos_obrigatorios.issubset(dados.keys()):
         abort(400, description=f"Campos obrigatórios: {', '.join(campos_obrigatorios)}")
 
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO aluno (NomeAluno, SenhaAluno, MatriculaAluno, EnderecoAluno)"
-        "VALUES (%s, %s, %s, %s)",
-        (dados["NomeAluno"], dados["SenhaAluno"], dados["MatriculaAluno"], dados["EnderecoAluno"])
+        "INSERT INTO aluno (NomeAluno, SenhaAluno, MatriculaAluno, EnderecoAluno, TurmaAluno, ContatoAluno)"
+        "VALUES (%s, %s, %s, %s, %s, %s)",
+        (dados["NomeAluno"], dados["SenhaAluno"], dados["MatriculaAluno"], dados["EnderecoAluno"], dados["TurmaAluno"], dados["ContatoAluno"])
     )
     conn.commit()
     novo_id = cursor.lastrowid
@@ -61,12 +62,12 @@ def atualizar_usuario(idAluno):
 
     # Para PUT, garanta que todos os campos estejam presentes
     if request.method == "PUT":
-        campos_esperados = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno"}
+        campos_esperados = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno", "TurmaAluno", "ContatoAluno"}
         if not campos_esperados.issubset(dados.keys()):
             abort(400, description=f"PUT requer todos os campos: {', '.join(campos_esperados)}")
 
     # Monta dinamicamente o SQL somente com os campos enviados
-    campos_validos = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno"}
+    campos_validos = {"NomeAluno", "SenhaAluno", "MatriculaAluno", "EnderecoAluno", "TurmaAluno", "ContatoAluno"}
     set_clauses = []
     valores = []
     for campo in campos_validos & dados.keys():
@@ -88,7 +89,7 @@ def atualizar_usuario(idAluno):
 
     if cursor.rowcount == 0:
         conn.close()
-        abort(404, description="Usuário não encontrado")
+        abort(404, description="usuário não encontrado")
 
     conn.close()
     # 204 = No Content, mas você pode devolver 200 com o JSON atualizado se preferir
@@ -98,7 +99,7 @@ def atualizar_usuario(idAluno):
 ##ROTA DELETE
 #############################################
 @aluno.route("/aluno/<int:idAluno>", methods=["DELETE"])
-def deletar_aluno(idAluno):
+def deletaraluno(idAluno):
     conn = conectar()
     cursor = conn.cursor()
 
@@ -110,8 +111,37 @@ def deletar_aluno(idAluno):
     if cursor.rowcount == 0:
         conn.close()
         # nenhum registro com esse ID → devolve 404
-        abort(404, description="Usuário não encontrado")
+        abort(404, description="usuário não encontrado")
 
     conn.close()
     # 204 = No Content (padrão para deleções bem‑sucedidas)
     return ("", 204)
+
+@aluno.route("/alunos/selecionar", methods=["GET"])
+def listar_alunos_para_selecao():
+    conn = conectar()
+
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT idAluno, NomeAluno, MatriculaAluno
+            FROM aluno
+        """)
+
+        dados = [
+            {
+                "idAluno": row[0],
+                "NomeAluno": row[1],
+                "MatriculaAluno": row[2]
+            }
+            for row in cursor.fetchall()
+        ]
+
+        return jsonify(dados), 200
+
+    except Exception as erro:
+        return jsonify({"erro": str(erro)}), 500
+
+    finally:
+        conn.close()
